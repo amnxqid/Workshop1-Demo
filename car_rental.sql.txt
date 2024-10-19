@@ -1,0 +1,35 @@
+-- Step 1: Create the database
+CREATE DATABASE IF NOT EXISTS car_rental;
+USE car_rental;
+
+-- Step 2: Create the Admin table
+CREATE TABLE IF NOT EXISTS Admin (
+    admin_id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    contact_no VARCHAR(15) NOT NULL,
+    age INT NOT NULL,
+    username VARCHAR(50) UNIQUE NOT NULL,
+    password VARCHAR(50) NOT NULL
+);
+
+-- Step 3: Create the Car table
+CREATE TABLE IF NOT EXISTS Car (
+    car_id INT AUTO_INCREMENT PRIMARY KEY,
+    admin_id INT,
+    registration_no VARCHAR(50) UNIQUE NOT NULL,
+    type VARCHAR(50) NOT NULL,
+    brand VARCHAR(50) NOT NULL,
+    year INT NOT NULL,
+    FOREIGN KEY (admin_id) REFERENCES Admin(admin_id) ON DELETE CASCADE
+);
+
+-- Step 4: Insert example data into the Admin table
+INSERT INTO Admin (name, contact_no, age, username, password) VALUES
+('Alice Johnson', '1234567890', 30, 'alice', 'password123'),
+('Bob Smith', '0987654321', 40, 'bob', 'password456');
+
+-- Step 5: Insert example data into the Car table
+INSERT INTO Car (admin_id, registration_no, type, brand, year) VALUES
+(1, 'ABC1234', 'Sedan', 'Toyota', 2020),
+(1, 'XYZ5678', 'SUV', 'Honda', 2019),
+(2, 'LMN9101', 'Hatchback', 'Ford', 2021);

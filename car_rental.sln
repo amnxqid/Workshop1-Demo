@@ -1,31 +1,455 @@
-﻿
-Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 17
-VisualStudioVersion = 17.11.35312.102
-MinimumVisualStudioVersion = 10.0.40219.1
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "car_rental", "car_rental.vcxproj", "{9F26EE5B-0415-4052-8CAC-B759C23EEFCA}"
-EndProject
-Global
-	GlobalSection(SolutionConfigurationPlatforms) = preSolution
-		Debug|x64 = Debug|x64
-		Debug|x86 = Debug|x86
-		Release|x64 = Release|x64
-		Release|x86 = Release|x86
-	EndGlobalSection
-	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{9F26EE5B-0415-4052-8CAC-B759C23EEFCA}.Debug|x64.ActiveCfg = Debug|x64
-		{9F26EE5B-0415-4052-8CAC-B759C23EEFCA}.Debug|x64.Build.0 = Debug|x64
-		{9F26EE5B-0415-4052-8CAC-B759C23EEFCA}.Debug|x86.ActiveCfg = Debug|Win32
-		{9F26EE5B-0415-4052-8CAC-B759C23EEFCA}.Debug|x86.Build.0 = Debug|Win32
-		{9F26EE5B-0415-4052-8CAC-B759C23EEFCA}.Release|x64.ActiveCfg = Release|x64
-		{9F26EE5B-0415-4052-8CAC-B759C23EEFCA}.Release|x64.Build.0 = Release|x64
-		{9F26EE5B-0415-4052-8CAC-B759C23EEFCA}.Release|x86.ActiveCfg = Release|Win32
-		{9F26EE5B-0415-4052-8CAC-B759C23EEFCA}.Release|x86.Build.0 = Release|Win32
-	EndGlobalSection
-	GlobalSection(SolutionProperties) = preSolution
-		HideSolutionNode = FALSE
-	EndGlobalSection
-	GlobalSection(ExtensibilityGlobals) = postSolution
-		SolutionGuid = {BA7EA317-241F-4618-A4BB-82645E35E21F}
-	EndGlobalSection
-EndGlobal
+#include <iostream>
+#include <string>
+#include <iomanip>
+#include <mysql.h> // Make sure you have the MySQL library installed
+#include <conio.h>
+
+using namespace std;
+
+// Function declarations
+void Register();
+void Login();
+void AdminMenu();
+void ViewCar();
+void InsertCar();
+void EditCar();
+void DeleteCar();
+void SearchCar();
+
+// Global variables
+int qstate;
+MYSQL* conn;
+MYSQL_ROW row;
+MYSQL_RES* res;
+
+string UserID, CarID;
+
+class db_response
+{
+public:
+    static void ConnectionFunction()
+    {
+        conn = mysql_init(0);
+        if (conn)
+            cout << "Database Connected" << endl;
+        else
+            cout << "Failed To Connect!" << endl;
+
+        conn = mysql_real_connect(conn, "localhost", "root", "", "car_rental", 3306, NULL, 0);
+        if (conn)
+            cout << "Database Connected To MySql" << endl;
+        else
+            cout << "Failed To Connect!" << endl;
+    }
+};
+
+int main() {
+    system("cls");
+    system("title My Project");
+    db_response::ConnectionFunction();
+
+    int menu;
+    cout << "1. Login" << endl;
+    cout << "2. Register" << endl;
+    cout << "3. Exit" << endl;
+    cout << "Choose: ";
+    cin >> menu;
+
+    switch (menu)
+    {
+    case 1:
+        Login();
+        break;
+    case 2:
+        Register();
+        break;
+    case 3:
+        cout << "Program Exiting..." << endl;
+        exit(0);
+    default:
+        cout << "Please choose between 1 - 3. Press Enter To Continue...";
+        _getch();
+        system("cls");
+        main();
+        break;
+    }
+
+    return 0;
+}
+
+void Register()
+{
+    system("cls");
+    string name, phone, age, username, password;
+    cout << "--- Admin Register ---" << endl;
+    cout << "Enter Name: ";
+    cin.ignore(1, '\n');
+    getline(cin, name);
+    cout << "Enter Phone: ";
+    getline(cin, phone);
+    cout << "Enter age: ";
+    getline(cin, age);
+    cout << "Enter Username: ";
+    getline(cin, username);
+    cout << "Enter Password: ";
+    getline(cin, password);
+
+    string checkUser_query = "SELECT * FROM Admin WHERE Username = '" + username + "'";
+    const char* cu = checkUser_query.c_str();
+    qstate = mysql_query(conn, cu);
+
+    if (!qstate)
+    {
+        res = mysql_store_result(conn);
+        if (res->row_count == 1)
+        {
+            cout << "Username already exists. Press Enter to Try Again...";
+            _getch();
+            Register();
+        }
+        else
+        {
+            string insertCustomer_query = "INSERT INTO Admin (name, contact_no, age, username, password) VALUES ('" + name + "', '" + phone + "', '" + age + "', '" + username + "', '" + password + "')";
+            const char* q = insertCustomer_query.c_str();
+            qstate = mysql_query(conn, q);
+
+            if (!qstate)
+            {
+                cout << endl << "You have been registered. Press Enter to Continue...";
+                _getch();
+                main();
+            }
+            else
+            {
+                cout << "Query Execution Problem!" << mysql_errno(conn) << endl;
+            }
+        }
+    }
+    else
+    {
+        cout << "Query Execution Problem!" << mysql_errno(conn) << endl;
+    }
+}
+
+void Login()
+{
+    system("cls");
+    string password;
+    string username;
+
+    cout << "--- Login Page ---" << endl;
+    cout << "Username: ";
+    cin >> username;
+    cout << "Password: ";
+    char ch;
+    while ((ch = _getch()) != 13) // 13 is the ASCII value for Enter key
+    {
+        password += ch;
+        cout << '*'; // Displaying asterisk instead of password
+    }
+
+    string checkUser_query = "SELECT admin_id FROM Admin WHERE username = '" + username + "' AND password = '" + password + "'";
+    const char* cu = checkUser_query.c_str();
+    qstate = mysql_query(conn, cu);
+
+    if (!qstate)
+    {
+        res = mysql_store_result(conn);
+        if (res->row_count == 1)
+        {
+            while (row = mysql_fetch_row(res))
+                UserID = row[0];
+            AdminMenu();
+        }
+        else
+        {
+            char c;
+            cout << "Invalid username or password. Want to try again? (y/n): ";
+            cin >> c;
+            if (c == 'y' || c == 'Y')
+                Login();
+            else
+                main();
+        }
+    }
+    else
+        cout << "Query Execution Problem!" << mysql_errno(conn) << endl;
+}
+
+void AdminMenu()
+{
+    int menu;
+
+    system("cls");
+    cout << "-----Admin Page------" << endl;
+
+    cout << "1. View Car" << endl;
+    cout << "2. Insert New Car" << endl;
+    cout << "3. Edit Car" << endl;
+    cout << "4. Delete Car" << endl;
+    cout << "5. Search Car" << endl;
+    cout << "6. Logout" << endl;
+    cout << "Choose menu: ";
+
+    cin >> menu;
+
+    switch (menu)
+    {
+    case 1:
+        ViewCar();
+        break;
+    case 2:
+        InsertCar();
+        break;
+    case 3:
+        EditCar();
+        break;
+    case 4:
+        DeleteCar();
+        break;
+    case 5:
+        SearchCar();
+        break;
+    case 6:
+        main();
+        break;
+    default:
+        cout << "Please choose between 1 - 5. Press Enter To Continue...";
+        _getch();
+        system("cls");
+        AdminMenu();
+        break;
+    }
+}
+
+void InsertCar()
+{
+    system("cls");
+
+    string registration_no, type, brand, year;
+    char choose;
+    cout << "-----Insert New Car-----" << endl;
+
+    cin.ignore(1, '\n');
+    cout << "Car Registration No.: ";
+    getline(cin, registration_no);
+    cout << "Type of Car: ";
+    getline(cin, type);
+    cout << "Car Brand: ";
+    getline(cin, brand);
+    cout << "Manufacturer Year: ";
+    getline(cin, year);
+
+    string insert_query = "INSERT INTO Car (admin_id, registration_no, type, brand, year) VALUES ('" + UserID + "', '" + registration_no + "', '" + type + "', '" + brand + "', '" + year + "')";
+    const char* q = insert_query.c_str();
+    qstate = mysql_query(conn, q);
+
+    if (!qstate)
+    {
+        cout << endl << "Car has been successfully added to the database." << endl;
+    }
+    else
+    {
+        cout << "Query Execution Problem!" << mysql_errno(conn) << endl;
+    }
+
+    do
+    {
+        cout << "Do you want to add another car? (y/n): ";
+        cin >> choose;
+        if (choose == 'y' || choose == 'Y')
+        {
+            InsertCar();
+        }
+        else if (choose == 'n' || choose == 'N')
+        {
+            ViewCar();
+        }
+    } while (choose == 'y' || choose == 'Y' || choose == 'n' || choose == 'N');
+}
+
+void ViewCar()
+{
+    system("cls");
+    char choose;
+    cout << "\t\t\t\t--- List of All Cars ---" << endl;
+
+    qstate = mysql_query(conn, "SELECT car_id, registration_no, type, brand, year FROM Car");
+
+    if (!qstate)
+    {
+        cout << setw(11) << "ID" << setw(17) << "Registration No" << setw(20) << "Car Type" << setw(20) << "Car Brand" << setw(25) << "Manufacturer Year" << endl;
+
+        res = mysql_store_result(conn);
+        while (row = mysql_fetch_row(res))
+        {
+            cout << setw(11) << row[0] << setw(17) << row[1] << setw(20) << row[2] << setw(20) << row[3] << setw(20) << row[4] << endl;
+        }
+    }
+    else
+    {
+        cout << "Query Execution Problem!" << mysql_errno(conn) << endl;
+    }
+
+    cout << "Press Enter To Go Back...";
+    _getch();
+    AdminMenu();
+}
+
+void EditCar()
+{
+    system("cls");
+
+    string data;
+    int choose;
+    char option;
+    cout << "-----Edit Car-----" << endl;
+
+    qstate = mysql_query(conn, "SELECT car_id, registration_no, type, brand, year FROM Car");
+
+    if (!qstate)
+    {
+        cout << setw(11) << "ID" << setw(17) << "Registration No" << setw(20) << "Car Type" << setw(20) << "Car Brand" << setw(25) << "Manufacturer Year" << endl;
+
+        res = mysql_store_result(conn);
+        while (row = mysql_fetch_row(res))
+        {
+            cout << setw(11) << row[0] << setw(17) << row[1] << setw(20) << row[2] << setw(20) << row[3] << setw(20) << row[4] << endl;
+        }
+
+        cout << "Choose Car ID: ";
+        cin >> CarID;
+
+        cout << endl << "-----Edit Options-----" << endl;
+        cout << "1. Registration No." << endl;
+        cout << "2. Car Type" << endl;
+        cout << "3. Car Brand" << endl;
+        cout << "4. Manufacturer Year" << endl;
+        cout << "Choose 1-4: ";
+        cin >> choose;
+
+        cin.ignore(1, '\n');
+        if (choose == 1)
+        {
+            cout << "New Registration No.: ";
+            getline(cin, data);
+            string update_query = "UPDATE Car SET registration_no = '" + data + "' WHERE car_id = '" + CarID + "'";
+            const char* q = update_query.c_str();
+            qstate = mysql_query(conn, q);
+        }
+        else if (choose == 2)
+        {
+            cout << "New Car Type: ";
+            getline(cin, data);
+            string update_query = "UPDATE Car SET type = '" + data + "' WHERE car_id = '" + CarID + "'";
+            const char* q = update_query.c_str();
+            qstate = mysql_query(conn, q);
+        }
+        else if (choose == 3)
+        {
+            cout << "New Car Brand: ";
+            getline(cin, data);
+            string update_query = "UPDATE Car SET brand = '" + data + "' WHERE car_id = '" + CarID + "'";
+            const char* q = update_query.c_str();
+            qstate = mysql_query(conn, q);
+        }
+        else if (choose == 4)
+        {
+            cout << "New Manufacturer Year: ";
+            getline(cin, data);
+            string update_query = "UPDATE Car SET year = '" + data + "' WHERE car_id = '" + CarID + "'";
+            const char* q = update_query.c_str();
+            qstate = mysql_query(conn, q);
+        }
+
+        cout << "Do you want to edit another detail? (y/n): ";
+        cin >> option;
+
+        if (option == 'y' || option == 'Y')
+            EditCar();
+        else
+            ViewCar();
+    }
+    else
+    {
+        cout << "Query Execution Problem!" << mysql_errno(conn) << endl;
+    }
+}
+
+void DeleteCar()
+{
+    system("cls");
+    char choose;
+    cout << "--- Delete Car ---" << endl;
+
+    qstate = mysql_query(conn, "SELECT car_id, registration_no, type, brand, year FROM Car");
+
+    if (!qstate)
+    {
+        cout << setw(11) << "ID" << setw(17) << "Registration No" << setw(20) << "Car Type" << setw(20) << "Car Brand" << setw(25) << "Manufacturer Year" << endl;
+
+        res = mysql_store_result(conn);
+        while (row = mysql_fetch_row(res))
+        {
+            cout << setw(11) << row[0] << setw(17) << row[1] << setw(20) << row[2] << setw(20) << row[3] << setw(20) << row[4] << endl;
+        }
+
+        cout << "Choose Car ID: ";
+        cin >> CarID;
+
+        string delete_query = "DELETE FROM Car WHERE car_id = '" + CarID + "'";
+        const char* q = delete_query.c_str();
+        qstate = mysql_query(conn, q);
+
+        cout << "Do you want to delete another car? (y/n): ";
+        cin >> choose;
+
+        if (choose == 'y' || choose == 'Y')
+            DeleteCar();
+        else
+            ViewCar();
+    }
+    else
+    {
+        cout << "Query Execution Problem!" << mysql_errno(conn) << endl;
+    }
+}
+
+void SearchCar()
+{
+    system("cls");
+    char choose;
+    string brand;
+    cin.ignore(1, '\n');
+    cout << "Search car by brand: ";
+    getline(cin, brand);
+
+    cout << "--- List of Searched Cars ---" << endl;
+
+    string search_query = "SELECT car_id, registration_no, type, brand, year FROM Car WHERE brand LIKE '%" + brand + "%'";
+    const char* q = search_query.c_str();
+    qstate = mysql_query(conn, q);
+
+    if (!qstate)
+    {
+        cout << setw(11) << "ID" << setw(17) << "Registration No" << setw(20) << "Car Type" << setw(20) << "Car Brand" << setw(25) << "Manufacturer Year" << endl;
+
+        res = mysql_store_result(conn);
+        while (row = mysql_fetch_row(res))
+        {
+            cout << setw(11) << row[0] << setw(17) << row[1] << setw(20) << row[2] << setw(20) << row[3] << setw(20) << row[4] << endl;
+        }
+
+        cout << endl << "Do you want to search another brand? (y/n): ";
+        cin >> choose;
+
+        if (choose == 'y' || choose == 'Y')
+            SearchCar();
+        else if (choose == 'n' || choose == 'N')
+            AdminMenu();
+    }
+    else
+    {
+        cout << "Query Execution Problem!" << mysql_errno(conn) << endl;
+    }
+}
